@@ -1,9 +1,15 @@
 from torchvision.models import resnet50,resnet18,AlexNet
 from torch import nn
+from torchvision.models import inception_v3
 import torch
 from torchvision import datasets,models,transforms
 import math
 import torch.utils.model_zoo as model_zoo
+import torch.nn.functional as F
+from collections import namedtuple
+
+
+_InceptionOutputs = namedtuple('InceptionOutputs', ['logits', 'aux_logits'])
 
 class myModle(nn.Module):
     def __init__(self,num_classes):
@@ -202,3 +208,62 @@ class ContrastiveLoss(nn.Module):
         loss = y * dist_sq + (1 - y) * torch.pow(dist, 2)
         loss = torch.sum(loss) / 2.0 / x0.size()[0]
         return loss
+
+
+class InceptionNet(nn.Module):
+    def __init__(self, model, faceClass,aux_logits=True):
+        super(InceptionNet, self).__init__()
+        self.aux_logits = aux_logits
+        self.model = model
+        # -1表示去掉model的后两层
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.vgg_layer = nn.Sequential(*list(model.children())[:-1])
+        
+        self.Linear_layer = nn.Linear(2048, faceClass)
+
+    def forward(self, x):
+        x = self.vgg_layer[:3](x)
+        # N x 64 x 147 x 147
+        x = F.max_pool2d(x, kernel_size=3, stride=2)
+        
+        x = self.vgg_layer[3:5](x)
+        # N x 192 x 71 x 71
+        x = F.max_pool2d(x, kernel_size=3, stride=2)
+   
+        x = self.vgg_layer[5:13](x)
+        # N x 768 x 17 x 17
+        if self.training and self.aux_logits:
+            aux = self.vgg_layer[13](x)
+        
+        x = self.vgg_layer[14:](x)
+        # N x 2048 x 8 x 8
+        # Adaptive average pooling
+        x = F.adaptive_avg_pool2d(x, (1, 1))
+        # N x 2048 x 1 x 1
+        x = F.dropout(x, training=self.training)
+        # N x 2048 x 1 x 1
+        x = torch.flatten(x, 1)
+        # N x 2048
+        x = self.Linear_layer(x)
+        # N x 1000 (num_classes)
+        if self.training and self.aux_logits:
+            return _InceptionOutputs(x, aux)
+        return x
+
+def LoadInceptionNet(faceClass):
+    # 加载model
+    inception = models.inception_v3()
+    inception.load_state_dict(torch.load("X:\\Downloads\\inception_v3_google-1a9a5a14.pth"))
+    #3 4 6 3 分别表示layer1 2 3 4 中Bottleneck模块的数量。res101则为3 4 23 3 
+    cnn = InceptionNet(inception,faceClass)
+    # 读取参数
+    pretrained_dict = inception.state_dict()
+    model_dict = cnn.state_dict()
+    # 将pretrained_dict里不属于model_dict的键剔除掉
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+    # 更新现有的model_dict
+    model_dict.update(pretrained_dict)
+    # 加载我们真正需要的state_dict
+    cnn.load_state_dict(model_dict)
+    return cnn

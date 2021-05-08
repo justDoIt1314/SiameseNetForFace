@@ -1,0 +1,5 @@
+face_class_train.py:用于人脸分类，人脸是谁
+facenet.py:用于人脸检测的demo
+app.py:作为服务器，使用了Flask框架
+dataset.py : 数据加载器
+siameseTrain.py：使用了欧式距离衡量2张人脸的相似度，使用对比损失进行训练

@@ -1,0 +1,7 @@
+
+*.bmp
+*.jpg
+*.png
+class_face.pth
+*.pth
+training_images_bigdata.rar

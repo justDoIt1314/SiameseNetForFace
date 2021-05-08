@@ -74,6 +74,32 @@ class FaceClassDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.imgs)
 
+class GenderClassDataset(torch.utils.data.Dataset):
+    def __init__(self,root,transforms,classes,isTrain):
+        self.root = root
+        self.transforms = transforms
+        self.classes = classes
+        self.imgs_Female = list(glob.glob(os.path.join(self.root,'Female') + "/*.*"))
+        self.imgs_Male = list(glob.glob(os.path.join(self.root,'Male') + "/*.*"))
+        self.imgs = self.imgs_Female+self.imgs_Male
+        if not isTrain:
+            self.imgs = self.imgs[:len(self.imgs)//4]
+
+        
+    def __getitem__(self, idx):
+        img_path = self.imgs[idx]
+        img = Image.open(img_path).convert("RGB")
+        if self.transforms is not None:
+            img = self.transforms(img)
+        
+        y = img_path.split('\\')[-2]
+        label = 0 if y == 'Female' else 1
+
+        return img, torch.tensor(label,dtype=torch.long)
+
+
+    def __len__(self):
+        return len(self.imgs)
 
 class UnlockDataset(torch.utils.data.Dataset):
     def __init__(self,root,transforms):

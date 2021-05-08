@@ -13,7 +13,7 @@ import cv2
 from dataset import FaceClassDataset
 from flask import Flask, request, jsonify, render_template
 import io,base64
-from network import myModle_class,LoadCNN
+from network import myModle_class,LoadCNN,LoadInceptionNet
 from PIL import Image 
 
 app = Flask(__name__)
@@ -25,11 +25,18 @@ faceClasses = 7
 #names = ['唐僧','姚明','张学友','曹寅','郭爱斌','饶志豪', '曹焕琪']
 names = ['tangseng','yaoming','zhangxueyou','caoyin','guoaibin','raozhihao','caohuanqi']
 
+def get_class_face_model():
+    #model = myModle_class(faceClasses)
+    model = LoadCNN(faceClasses)
+    #model = torch.load('./class_face.pth')
+    model.load_state_dict(torch.load('./class_face.pth'))
+    return model
+def get_gender_model():
+    model = LoadInceptionNet(2)
+    model.load_state_dict(torch.load('./gender.pth'))
+    return model
 
-#model = myModle_class(faceClasses)
-model = LoadCNN(faceClasses)
-#model = torch.load('./class_face.pth')
-model.load_state_dict(torch.load('./class_face.pth'))
+model = get_gender_model()
 model.to(device)
 
 
@@ -85,6 +92,9 @@ def predict2():
     
     #return name
     return jsonify({'result': name})
+@app.route('/test_gender', methods=['POST'])
+def test_gender():
+    video = cv2.VideoCapture()
 
 def main():
     ################# 加载模型  ####################################
