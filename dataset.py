@@ -57,7 +57,7 @@ class FaceClassDataset(torch.utils.data.Dataset):
         self.root = root
         self.transforms = transforms
         self.classes = classes
-        self.imgs = list(sorted(glob.glob(self.root + "/*/*.png")))
+        self.imgs = list(sorted(glob.glob(self.root + "/*/*.*")))
         print(self.imgs)
 
         

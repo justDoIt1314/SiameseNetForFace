@@ -16,6 +16,7 @@ import io,base64
 from network import myModle_class,LoadCNN,LoadInceptionNet
 from PIL import Image 
 
+
 app = Flask(__name__)
 #app.config['JSONIFY_MIMETYPE'] ="application/json;charset=utf-8"   # 指定浏览器渲染的文件类型，和解码格式；
 device = torch.device('cuda:0' if not torch.cuda.is_available() else 'cpu')

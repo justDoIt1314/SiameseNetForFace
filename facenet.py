@@ -15,7 +15,6 @@ import time
 import base64
 from network import LoadInceptionNet
 import glob
-
 # Determine if an nvidia GPU is available
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cuda:0')
@@ -41,7 +40,7 @@ def imgToBytes(frame):
 
 def get_gender_model():
     model = LoadInceptionNet(2)
-    model.load_state_dict(torch.load('./gender_foreign.pth'))
+    model.load_state_dict(torch.load('./gender.pth'))
     return model
 model = get_gender_model()
 model.to(device)
@@ -60,7 +59,7 @@ def detectGender(image_data):
     print(out)
     res = F.softmax(out)
     index = torch.argmax(res,0)
-    if res[index.item()] < 0.5:
+    if res[index.item()] < 0.7:
         res = 'unknow'
     else:
         res = gender[index.item()]
@@ -80,48 +79,49 @@ def main(Isvideo):
     mtcnn = MTCNN(keep_all=True, device=device)
     cap = None
     if Isvideo:
-        cap = cv2.VideoCapture('X:\\mda-me438xj06jhni3it.mp4')
+        cap = cv2.VideoCapture('X:\\mda-mb5g90fthhs8pttt.mp4')
     else:
         cap = cv2.VideoCapture(0)
     frames_tracked = []
     count = 0
+    cv2.namedWindow('face',cv2.WINDOW_NORMAL)
     while True:
         ret, frame = cap.read()
-        
-        count += 1
         if not ret:
             return
-        # Detect faces
-        boxes, _ = mtcnn.detect(frame)
-        # Draw faces
-        frame_draw = frame.copy()
-        if type(boxes) == numpy.ndarray:
-            for bbox in boxes:
-                x1 = int(bbox[0])
-                y1 = int(bbox[1])
-                p1 = (x1,y1)
-                x2 = int(bbox[2])
-                y2 = int(bbox[3])
-                p2 = (x2, y2)
-                subImage = frame[y1:y2, x1:x2]
-                # img_bytes = imgToBytes(subImage)
-                # 上传图像 等待回传
-                # data = {'img': img_bytes}
-                # r = requests.post(url, data=data)
-                r = detectGender(subImage)
-                #r = r.json()
-                cv2.rectangle(frame_draw, p1, p2, (255,0,0), 2, 1)
-                cv2.putText(frame_draw, str(r), (int(bbox[0]),int(bbox[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50), 2)
-        cv2.imshow('face',frame_draw)
-        k = cv2.waitKey(1) & 0xff
-        if k == 27 : break
-        print('ok')
+        count += 1
+        if count % 5 == 0:
+            # Detect faces
+            boxes, _ = mtcnn.detect(frame)
+            # Draw faces
+            frame_draw = frame.copy()
+            if type(boxes) == numpy.ndarray:
+                for bbox in boxes:
+                    x1 = int(bbox[0])
+                    y1 = int(bbox[1])
+                    p1 = (x1,y1)
+                    x2 = int(bbox[2])
+                    y2 = int(bbox[3])
+                    p2 = (x2, y2)
+                    subImage = frame[y1:y2, x1:x2]
+                    # img_bytes = imgToBytes(subImage)
+                    # 上传图像 等待回传
+                    # data = {'img': img_bytes}
+                    # r = requests.post(url, data=data)
+                    r = detectGender(subImage)
+                    #r = r.json()
+                    cv2.rectangle(frame_draw, p1, p2, (255,0,0), 2, 1)
+                    cv2.putText(frame_draw, str(r), (int(bbox[0]),int(bbox[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50), 2)
+            cv2.imshow('face',frame_draw)
+            k = cv2.waitKey(1) & 0xff
+            if k == 27 : break
+            print('ok')
 
 
     
 
 if __name__ == '__main__':
-    main(False)
+    main(True)
 
 
 

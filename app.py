@@ -16,14 +16,17 @@ import io,base64
 from network import myModle_class,LoadCNN,LoadInceptionNet
 from PIL import Image 
 
+
+
 app = Flask(__name__)
-app.config['JSONIFY_MIMETYPE'] ="application/json;charset=utf-8"   # 指定浏览器渲染的文件类型，和解码格式；
+app.config['JSONIFY_MIMETYPE'] ="application/json;charset=ascii"   # 指定浏览器渲染的文件类型，和解码格式；
 device = torch.device('cuda' if not torch.cuda.is_available() else 'cpu')
 
 
-faceClasses = 7
-#names = ['唐僧','姚明','张学友','曹寅','郭爱斌','饶志豪', '曹焕琪']
-names = ['tangseng','yaoming','zhangxueyou','caoyin','guoaibin','raozhihao','caohuanqi']
+names = ['曹寅','郭爱斌','饶志豪', '曹焕琪']
+
+faceClasses = len(names)
+#names = ['tangseng','yaoming','zhangxueyou','caoyin','guoaibin','raozhihao','caohuanqi']
 
 def get_class_face_model():
     #model = myModle_class(faceClasses)
@@ -36,12 +39,13 @@ def get_gender_model():
     model.load_state_dict(torch.load('./gender.pth'))
     return model
 
-model = get_gender_model()
+model = LoadInceptionNet(faceClasses)
+model.load_state_dict(torch.load('./class_face_4.pth'))
 model.to(device)
 
 
 data_transform = transforms.Compose([
-    transforms.Resize((128,128)),
+    transforms.Resize((299,299)),
     transforms.RandomRotation(20),
     transforms.ToTensor()
 ])
