@@ -13,7 +13,7 @@ import os
 import cv2
 import time
 import base64
-from network import LoadInceptionNet
+from network import LoadInceptionNet,LoadInceptionNetForAge
 import glob
 # Determine if an nvidia GPU is available
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -42,8 +42,12 @@ def get_gender_model():
     model = LoadInceptionNet(2)
     model.load_state_dict(torch.load('./gender.pth'))
     return model
-model = get_gender_model()
-model.to(device)
+gender_model = get_gender_model()
+gender_model.to(device)
+
+age_model = LoadInceptionNetForAge(1)
+age_model.load_state_dict(torch.load('age_predict.pth'))
+age_model.to(device)
 
 def detectGender(image_data):
     if np.shape(image_data)[0] == 0 or np.shape(image_data)[1] == 0 or np.shape(image_data)[2] == 0:
@@ -53,17 +57,21 @@ def detectGender(image_data):
     image = data_transform(image)
     inputs = torch.unsqueeze(image,0)
     inputs = inputs.to(device)
-    model.eval()
-    out = model(inputs)
+    gender_model.eval()
+    out = gender_model(inputs)
     out = out[0]
     print(out)
     res = F.softmax(out)
     index = torch.argmax(res,0)
-    if res[index.item()] < 0.7:
+    if res[index.item()] < 0.8:
         res = 'unknow'
     else:
         res = gender[index.item()]
-    return res
+
+    age_model.eval()
+    age = age_model(inputs)
+    
+    return res,int(age.item())
 
 def main2():
     imgs = list(sorted(glob.glob('Y:\\DeepLearning\\SiameseNetForFace\\training_images_bigdata'+ "\\Female\\*.jpg")))
@@ -87,6 +95,7 @@ def main(Isvideo):
     cv2.namedWindow('face',cv2.WINDOW_NORMAL)
     while True:
         ret, frame = cap.read()
+        frame = cv2.imread("20210518152653.jpg")
         if not ret:
             return
         count += 1
@@ -108,10 +117,14 @@ def main(Isvideo):
                     # 上传图像 等待回传
                     # data = {'img': img_bytes}
                     # r = requests.post(url, data=data)
-                    r = detectGender(subImage)
+                    try:
+                        r ,age= detectGender(subImage)
+                    except Exception:
+                        print("error")
+                        continue
                     #r = r.json()
                     cv2.rectangle(frame_draw, p1, p2, (255,0,0), 2, 1)
-                    cv2.putText(frame_draw, str(r), (int(bbox[0]),int(bbox[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50), 2)
+                    cv2.putText(frame_draw, "gender:"+str(r)+" age:"+str(age), (int(bbox[0]-40),int(bbox[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0,0,255), 2)
             cv2.imshow('face',frame_draw)
             k = cv2.waitKey(1) & 0xff
             if k == 27 : break
@@ -121,7 +134,7 @@ def main(Isvideo):
     
 
 if __name__ == '__main__':
-    main(True)
+    main(False)
 
 
 

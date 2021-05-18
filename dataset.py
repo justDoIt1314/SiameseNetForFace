@@ -1,9 +1,15 @@
+from os import path
+from shutil import Error
+import cv2
 import torch
 from PIL import Image 
 import os
 import glob
 import random
 from itertools import combinations,permutations
+from facenet_pytorch import MTCNN
+
+
 class FaceDataset(torch.utils.data.Dataset):
     def __init__(self,root,transforms,classes):
         self.root = root
@@ -97,6 +103,69 @@ class GenderClassDataset(torch.utils.data.Dataset):
 
         return img, torch.tensor(label,dtype=torch.long)
 
+def ExtractFace():
+    import numpy
+    path_imgs = list(glob.glob("x:\\wiki_crop" + "/*/*"))
+    # for img_path in path_imgs:
+    #     filename = str(img_path.split('\\')[-1])
+    #     _,birth,now = filename.split('_')
+    #     birth = int(birth.split('-')[0])
+    #     now = int(now.split('.')[0])
+    #     age = now - birth
+    #     print(img_path)
+
+    path_imgs = path_imgs[16274:]
+    mtcnn = MTCNN(keep_all=True, device=torch.device('cuda:0'))
+    for i in range(len(path_imgs)):
+        try:
+            frame = cv2.imread(path_imgs[i])
+            boxes, _ = mtcnn.detect(frame)
+            if type(boxes) == numpy.ndarray:
+                for bbox in boxes:
+                    x1 = int(bbox[0])
+                    y1 = int(bbox[1])
+                    x2 = int(bbox[2])
+                    y2 = int(bbox[3])
+                    subImage = frame[y1:y2, x1:x2]
+                    cv2.imwrite(path_imgs[i],subImage)
+            else:
+                if os.path.exists(path_imgs[i]):
+                    os.remove(path_imgs[i])
+       
+        except Exception:
+            print(path_imgs[i]+"error")
+            if os.path.exists(path_imgs[i]):
+                os.remove(path_imgs[i])
+
+class AgeDataset(torch.utils.data.Dataset):
+    # X:\wiki_crop
+    def __init__(self,root,transforms,classes,isTrain):
+        self.root = root
+        self.transforms = transforms
+        self.classes = classes
+        self.imgs = list(glob.glob(self.root + "/*/*"))
+        if not isTrain:
+            self.imgs = self.imgs[:len(self.imgs)//5]
+        else:
+            self.imgs = self.imgs[len(self.imgs)//5:]
+
+        
+    def __getitem__(self, idx):
+        # try:
+        img_path = self.imgs[idx]
+        img = Image.open(img_path).convert("RGB")
+        if self.transforms is not None:
+            img = self.transforms(img)
+        
+        filename = str(img_path.split('\\')[-1])
+        _,birth,now = filename.split('_')
+        birth = int(birth.split('-')[0])
+        now = int(now.split('.')[0])
+        age = now - birth
+        # print(self.imgs[idx])
+        return img, torch.tensor(age,dtype=torch.float32)
+        # except Exception:
+        #     print("加载图像出错")
 
     def __len__(self):
         return len(self.imgs)
@@ -119,3 +188,6 @@ class UnlockDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
+if __name__ == "__main__":
+    ExtractFace()

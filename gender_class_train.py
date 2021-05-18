@@ -85,6 +85,7 @@ def main():
 
         
         torch.save(model.state_dict(),model_path)
+
 if __name__ == "__main__":
     main()
 

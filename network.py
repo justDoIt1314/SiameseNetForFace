@@ -1,6 +1,7 @@
 from torchvision.models import resnet50,resnet18,AlexNet
 from torch import nn
 from torchvision.models import inception_v3
+from torchvision.models import inception
 from torchvision.models.inception import BasicConv2d,InceptionAux,InceptionA,InceptionB,InceptionC,InceptionD,InceptionE
 import torch
 from torchvision import datasets,models,transforms
@@ -252,6 +253,18 @@ class InceptionNet(nn.Module):
             return _InceptionOutputs(x, aux)
         return x
 
+class Conv2d_depthwise(nn.Module):
+
+    def __init__(self, in_channels, out_channels, **kwargs):
+        super(Conv2d_depthwise, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, 1,bias=False, groups=out_channels,**kwargs)
+        self.bn = nn.BatchNorm2d(out_channels, eps=0.001)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        return F.relu(x, inplace=True)
+
 class InceptionNet_v3(nn.Module):
     def __init__(self, num_classes=1000, aux_logits=True, transform_input=False):
         super(InceptionNet_v3, self).__init__()
@@ -262,6 +275,8 @@ class InceptionNet_v3(nn.Module):
         self.Conv2d_2b_3x3 = BasicConv2d(32, 64, kernel_size=3, padding=1)
         self.Conv2d_3b_1x1 = BasicConv2d(64, 80, kernel_size=1)
         self.Conv2d_4a_3x3 = BasicConv2d(80, 192, kernel_size=3)
+        self.Conv2d_depth_wise = Conv2d_depthwise(192,192)
+        
         self.Mixed_5b = InceptionA(192, pool_features=32)
         self.Mixed_5c = InceptionA(256, pool_features=64)
         self.Mixed_5d = InceptionA(288, pool_features=64)
@@ -310,6 +325,9 @@ class InceptionNet_v3(nn.Module):
         x = self.Conv2d_4a_3x3(x)
         # N x 192 x 71 x 71
         x = F.max_pool2d(x, kernel_size=3, stride=2)
+
+        # N x 192 x 71 x 71
+        x = self.Conv2d_depth_wise(x)
         # N x 192 x 35 x 35
         x = self.Mixed_5b(x)
         # N x 256 x 35 x 35
@@ -348,18 +366,37 @@ class InceptionNet_v3(nn.Module):
         if self.training and self.aux_logits:
             return _InceptionOutputs(x, aux)
         return x
-
-def LoadInceptionNet(faceClass):
-    # 加载model
-    inception = models.inception_v3(num_classes=2)
+def LoadInceptionNetForAge(faceclass):
+    inception = InceptionNet_v3(num_classes = faceclass)
     v3 = models.inception_v3()
     v3.load_state_dict(torch.load("X:\\Downloads\\inception_v3_google-1a9a5a14.pth"))
     pretrained_dict = v3.state_dict()
     model_dict = inception.state_dict()
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-    
+    pretrained_dict.popitem()
+    pretrained_dict.popitem()
+    pretrained_dict.pop('AuxLogits.fc.weight')
+    pretrained_dict.pop('AuxLogits.fc.bias')
     model_dict.update(pretrained_dict)
-    model_dict = model_dict
+ 
+    inception.load_state_dict(model_dict)
+    return inception
+
+def LoadInceptionNet(faceClass):
+    # 加载model
+    inception = models.inception_v3(num_classes=faceClass)
+    return inception
+    v3 = models.inception_v3()
+    v3.load_state_dict(torch.load("X:\\Downloads\\inception_v3_google-1a9a5a14.pth"))
+    pretrained_dict = v3.state_dict()
+    model_dict = inception.state_dict()
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+    pretrained_dict.popitem()
+    pretrained_dict.popitem()
+    pretrained_dict.pop('AuxLogits.fc.weight')
+    pretrained_dict.pop('AuxLogits.fc.bias')
+    model_dict.update(pretrained_dict)
+ 
     inception.load_state_dict(model_dict)
     return inception
     #3 4 6 3 分别表示layer1 2 3 4 中Bottleneck模块的数量。res101则为3 4 23 3 
@@ -380,3 +417,6 @@ def LoadInceptionNet(faceClass):
     # 加载我们真正需要的state_dict
     cnn.load_state_dict(model_dict)
     return cnn
+
+if __name__ == "__main__":
+    model = LoadInceptionNetForAge(1)
