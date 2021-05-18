@@ -7,7 +7,9 @@ face_class_train.py: 人脸分类训练代码
 
 gender_class_train.py: 性别分类的训练代码
 
-facenet.py: 利用MTCNN进行人脸检测，并通过检测的人脸进行性别分类
+age_regression_train.py：年龄预测的训练代码
+
+face_detect.py: 利用MTCNN进行人脸检测，并通过检测的人脸进行性别分类,年龄预测
 
 gender.pth: 性别分类的模型文件
 
