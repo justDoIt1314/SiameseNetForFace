@@ -20,6 +20,8 @@ from torchvision import datasets,models,transforms
 from dataset import FaceDataset,UnlockDataset,FaceClassDataset,GenderClassDataset,AgeDataset
 from network import myModle,myModle_class,LoadCNN,InceptionNet,LoadInceptionNet,LoadInceptionNetForAge
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+
 nn.L1Loss
 batch = 8
 faceClass = 1
@@ -53,8 +55,6 @@ def main():
     criterion = nn.SmoothL1Loss()
     for epoch in range(epochs):
 
-        
-        
         model.train()
         print("train>>>")
         for idx,(imgs_1,labels) in enumerate(dataloader):
@@ -69,17 +69,23 @@ def main():
             print("epoch: {0}/{1}, batch:{2}/{3} train_loss: {4}".format(epoch,epochs,idx,dataloader_size,train_loss.item()))
             writer.add_scalar("train_loss", train_loss.item(),idx + epoch * dataloader_size)
 
-        
         model.eval()
         print("test>>>")
+        y_pred = []
+        y_true = [] 
         for idx,(imgs_1,labels) in enumerate(test_dataloader):
+            y_true = np.append(y_true,labels.numpy())
             imgs_1 = imgs_1.to(device)
             labels = labels.to(device)
             labels = labels.unsqueeze(1)
             outs_1 = model(imgs_1)
+            y_pred = np.append(y_pred,outs_1.detach().cpu().numpy())
             test_loss = F.smooth_l1_loss(outs_1,labels)
             print("epoch: {0}/{1}, batch:{2}/{3},test_loss:{4}".format(epoch,epochs,idx,len(test_dataloader),test_loss))
             writer.add_scalar("test_loss", test_loss.item(),idx + epoch * len_test_dataloader)
+
+        print("评估："+str(r2_score(y_true,y_pred)))
+        
         
         torch.save(model.state_dict(),model_path)
 
