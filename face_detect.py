@@ -95,7 +95,7 @@ def main(Isvideo):
     cv2.namedWindow('face',cv2.WINDOW_NORMAL)
     while True:
         ret, frame = cap.read()
-        frame = cv2.imread("20210518152653.jpg")
+        #frame = cv2.imread("20210518152653.jpg")
         if not ret:
             return
         count += 1
@@ -134,7 +134,7 @@ def main(Isvideo):
     
 
 if __name__ == '__main__':
-    main(False)
+    main(True)
 
 
 
