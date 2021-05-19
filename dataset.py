@@ -103,6 +103,22 @@ class GenderClassDataset(torch.utils.data.Dataset):
 
         return img, torch.tensor(label,dtype=torch.long)
 
+def checkAge():
+    import numpy
+    path_imgs = list(glob.glob("x:\\wiki_crop" + "/*/*"))
+    for img_path in path_imgs:
+        filename = str(img_path.split('\\')[-1])
+        _,birth,now = filename.split('_')
+        birth = int(birth.split('-')[0])
+        now = int(now.split('.')[0])
+        age = now - birth
+        if(age<0):
+            print("age<0 "+ img_path)
+            os.remove(img_path)
+        elif(age >100):
+            print("age>100 "+ img_path)
+            os.remove(img_path)
+
 def ExtractFace():
     import numpy
     path_imgs = list(glob.glob("x:\\wiki_crop" + "/*/*"))
@@ -190,4 +206,4 @@ class UnlockDataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 if __name__ == "__main__":
-    ExtractFace()
+    checkAge()
